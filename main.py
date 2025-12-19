@@ -13,37 +13,59 @@ warnings.filterwarnings(
 
 from sentence_transformers import SentenceTransformer
 import uuid
-from typing import List
+from typing import List,Any
 import numpy as np
 from pathlib import Path
-from langchain_community.document_loaders import PyPDFLoader, TextLoader
 from langchain_community.document_loaders import PyMuPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 import chromadb
+import fitz 
+import pytesseract
+from PIL import Image
+import io
+from langchain_core.documents import Document
+import re
+pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
 
 ##processing all the pdf files into text 
 
-def process_all_texts(path):
-    all_documents = []
-    pdf_dir = Path(path)
-    pdf_docs = list(pdf_dir.glob("**/*.pdf"))
 
-    for pdf_file in pdf_docs:
-        new_data = PyMuPDFLoader(str(pdf_file))
-        docs = new_data.load()
+def process_pdf_hybrid(pdf_path: str, text_threshold: int = 50):
+    doc = fitz.open(pdf_path)
+    docs = []
 
-        for doc in docs:
-            doc.metadata["file_name"] = pdf_file.name
-            doc.metadata["file_type"] = "pdf"
+    for i, page in enumerate(doc):
+        text = page.get_text()
 
-        all_documents.extend(docs)
-    
-    return all_documents
+        if len(text.strip()) < text_threshold:
+            # Fallback to OCR
+            pix = page.get_pixmap()
+            img = Image.open(io.BytesIO(pix.tobytes()))
+            text = pytesseract.image_to_string(img)
+
+        docs.append(
+            Document(
+                page_content=text.strip(),
+                metadata={
+                    "source_file": pdf_path.split("\\")[-1],
+                    "page_number": i + 1,
+                    "file_type": "pdf"
+                }
+            )
+        )
+
+    return docs
 
 pdf_files_path = "C:\\Users\\Pranav Bansal\\Documents\\LLM_POWERED_API_AGENT\\pdf_files"
-docs = process_all_texts(pdf_files_path)
+docs = []
 
-import re
+from pathlib import Path
+pdf_dir = Path(pdf_files_path)
+pdf_files = list(pdf_dir.glob("*.pdf"))
+
+for pdf in pdf_files:
+    doc = process_pdf_hybrid(str(pdf))
+    docs.extend(doc)
 
 def clean_page_text(text: str) -> str:
     lines = text.splitlines()
@@ -84,7 +106,21 @@ def split_docs(documents,chunk_size,chunk_overlap):
     text_splitter = RecursiveCharacterTextSplitter(
         chunk_size = chunk_size,
         chunk_overlap = chunk_overlap,
-        separators=["\n\n","\n"," ",""]
+        separators = [
+            "\n```",      
+            "\n#include", 
+            "\ndef ",       
+            "\nclass ",     
+            "\n## ",
+            "\n### ",
+            "\n\n",
+            "\n- ",
+            "\n* ",
+            ". ",      
+            "\n",
+            " ",
+            ""
+        ]
     )
 
     splitted_text = text_splitter.split_documents(documents)
@@ -94,6 +130,8 @@ for d in docs:
     d.page_content = clean_page_text(d.page_content)
 
 chunks = split_docs(docs,2000,200)
+
+##created the embedding manager
 
 class EmbeddingManager:
 
@@ -105,19 +143,17 @@ class EmbeddingManager:
 
     def generate_embeddings(self, texts: List[str]) -> np.ndarray:
         
-        embeddings = self.model.encode(texts)
+        embeddings = embeddings = embeddings = self.model.encode(
+                                    texts,
+                                    batch_size=64,
+                                    normalize_embeddings=True
+                                    )
         return embeddings
     
 texts = [doc.page_content for doc in chunks]
 
 embedding_manager=EmbeddingManager()
 embeddings = embedding_manager.generate_embeddings(texts)
-
-import os
-import uuid
-from typing import List, Any
-import numpy as np
-import chromadb
 
 
 class VectorStore:
@@ -179,10 +215,6 @@ def retrieve_top_docs(query: str, top_k: int = 3):
     dists = results.get('distances', [[]])[0]
     return list(zip(docs, metas, dists))
 
-def build_context(top_docs):
-    
-    context = "\n\n".join([doc for doc, meta, dist in top_docs])
-    return context
 
 from langchain_groq import ChatGroq
 
@@ -190,23 +222,37 @@ llm = ChatGroq(
         api_key=os.getenv("GROQ_API_KEY"),
         model_name="llama-3.3-70b-versatile",
         temperature=0.7,
-        max_tokens=500
+        max_tokens=1500
     )
     
 def build_context(top_docs):
-    
-    context = "\n\n".join([doc for doc, meta, dist in top_docs])
-    return context
+    context_parts = []
+    for i, (doc, meta, dist) in enumerate(top_docs):
+        context_parts.append(
+            f"[Source {i+1} | Page {meta.get('page', 'N/A')}]\n{doc}"
+        )
+    return "\n\n".join(context_parts)
 
 from langchain_core.prompts import PromptTemplate
 
 prompt = PromptTemplate(
     input_variables=["context", "question"],
     template=(
-        "You are a helpful assistant.\n"
-        "Context: {context}\n"
-        "Question: {question}\n"
-        "Answer:"
+        """
+        You are a helpful assistant.
+        Use the following extracted parts of a document to answer the question.
+        If the answer spans multiple parts, combine them logically.
+        If the answer is not fully contained, say so clearly.
+        If the answer is not found in the context then output that no such data is available.
+
+        Context:
+        {context}
+
+        Question:
+        {question}
+
+        Answer:
+    """
     )
 )
 
@@ -217,10 +263,19 @@ def answer_query(query):
     response = llm.invoke(formatted_prompt)  
     return response.content.strip()
 
-query = input("Enter the question you want to ask : ")
-answer = answer_query(query)
-print("\n🧠 Answer:\n", answer)
 
+from rich.console import Console
+from rich.markdown import Markdown
+
+console = Console()
+
+while True:
+    query = input("Enter the question you want to ask : ")
+    if str.lower(query) == "exit":
+        break
+    answer = answer_query(query)
+
+    console.print(Markdown(answer))
 
 
 
