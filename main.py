@@ -270,20 +270,13 @@ if uploaded_file and st.button("Process & Index PDF"):
 
         raw_docs = run_pdf_in_sandbox(temp_path)
 
-        st.write("Pages extracted:", len(raw_docs))
-
-        if raw_docs:
-            st.write("First page length:", len(raw_docs[0]["page_content"]))
-            st.write("Preview:", raw_docs[0]["page_content"][:200])
-
         docs = [
             Document(page_content=d["page_content"], metadata=d["metadata"])
             for d in raw_docs
         ]
-
-        
-        # for d in docs:
-        #     d.page_content = clean_page_text(d.page_content)
+ 
+        for d in docs:
+            d.page_content = clean_page_text(d.page_content)
 
         chunks = split_docs(docs, 2000, 200)
         
