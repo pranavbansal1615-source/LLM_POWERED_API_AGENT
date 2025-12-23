@@ -19,53 +19,33 @@ from pathlib import Path
 from langchain_community.document_loaders import PyMuPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 import chromadb
-import fitz 
-import pytesseract
-from PIL import Image
-import io
 from langchain_core.documents import Document
 import re
-pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+import torch
+import subprocess
+import sys
+import json
 
 ##processing all the pdf files into text 
 
-
-def process_pdf_hybrid(pdf_path: str, text_threshold: int = 50):
-    doc = fitz.open(pdf_path)
-    docs = []
-
-    for i, page in enumerate(doc):
-        text = page.get_text()
-
-        if len(text.strip()) < text_threshold:
-            # Fallback to OCR
-            pix = page.get_pixmap()
-            img = Image.open(io.BytesIO(pix.tobytes()))
-            text = pytesseract.image_to_string(img)
-
-        docs.append(
-            Document(
-                page_content=text.strip(),
-                metadata={
-                    "source_file": pdf_path.split("\\")[-1],
-                    "page_number": i + 1,
-                    "file_type": "pdf"
-                }
-            )
+def run_pdf_in_sandbox(pdf_path):
+    try:
+        completed = subprocess.run(
+            [sys.executable, "sandbox.py", pdf_path],
+            capture_output=True,
+            text=True,
+            env={}  
         )
 
-    return docs
+        if completed.returncode != 0:
+            raise RuntimeError(completed.stderr)
 
-pdf_files_path = "C:\\Users\\Pranav Bansal\\Documents\\LLM_POWERED_API_AGENT\\pdf_files"
-docs = []
+        return json.loads(completed.stdout)
 
-from pathlib import Path
-pdf_dir = Path(pdf_files_path)
-pdf_files = list(pdf_dir.glob("*.pdf"))
+    except subprocess.TimeoutExpired:
+        st.error("PDF processing timed out in sandbox.")
+        return []
 
-for pdf in pdf_files:
-    doc = process_pdf_hybrid(str(pdf))
-    docs.extend(doc)
 
 def clean_page_text(text: str) -> str:
     lines = text.splitlines()
@@ -126,11 +106,6 @@ def split_docs(documents,chunk_size,chunk_overlap):
     splitted_text = text_splitter.split_documents(documents)
     return splitted_text
 
-for d in docs:
-    d.page_content = clean_page_text(d.page_content)
-
-chunks = split_docs(docs,2000,200)
-
 ##created the embedding manager
 
 class EmbeddingManager:
@@ -139,22 +114,18 @@ class EmbeddingManager:
         
         self.model_name = model_name
         self.model = None
-        self.model = SentenceTransformer(self.model_name)
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        self.model = SentenceTransformer(self.model_name, device = device)
 
     def generate_embeddings(self, texts: List[str]) -> np.ndarray:
         
-        embeddings = embeddings = embeddings = self.model.encode(
+        embeddings = self.model.encode(
                                     texts,
-                                    batch_size=64,
-                                    normalize_embeddings=True
+                                    batch_size=128,
+                                    normalize_embeddings=True,
                                     )
         return embeddings
     
-texts = [doc.page_content for doc in chunks]
-
-embedding_manager=EmbeddingManager()
-embeddings = embedding_manager.generate_embeddings(texts)
-
 
 class VectorStore:
 
@@ -203,9 +174,14 @@ class VectorStore:
             documents=documents_text
         )
         
+def load_embedding_manager():
+    return EmbeddingManager()
 
-vectorstore=VectorStore()
-vectorstore.add_documents(chunks,embeddings)
+def load_vectorstore():
+    return VectorStore()
+
+embedding_manager = load_embedding_manager()
+vectorstore = load_vectorstore()
 
 def retrieve_top_docs(query: str, top_k: int = 3):
     q_emb = embedding_manager.generate_embeddings([query])[0].tolist()
@@ -222,7 +198,7 @@ llm = ChatGroq(
         api_key=os.getenv("GROQ_API_KEY"),
         model_name="llama-3.3-70b-versatile",
         temperature=0.7,
-        max_tokens=1500
+        max_tokens=1000
     )
     
 def build_context(top_docs):
@@ -264,18 +240,94 @@ def answer_query(query):
     return response.content.strip()
 
 
-from rich.console import Console
-from rich.markdown import Markdown
+import streamlit as st
 
-console = Console()
+if "pdf_indexed" not in st.session_state:
+    st.session_state.pdf_indexed = False
 
-while True:
-    query = input("Enter the question you want to ask : ")
-    if str.lower(query) == "exit":
-        break
-    answer = answer_query(query)
+st.set_page_config(page_title="PDF RAG System", layout="wide")
 
-    console.print(Markdown(answer))
+st.title("📄 PDF Question Answering System")
+st.write("Upload a PDF and ask questions based on its content.")
+
+uploaded_file = st.file_uploader(
+    "UPLOAD A PDF FILE",
+    type=["pdf"]
+) 
+
+if uploaded_file and st.button("Process & Index PDF"):
+    with st.spinner("Processing PDF..."):
+
+        if embedding_manager is None:
+            embedding_manager = load_embedding_manager()
+
+        if vectorstore is None:
+            vectorstore = load_vectorstore()
+
+        temp_path = "temp_uploaded.pdf"
+        with open(temp_path, "wb") as f:
+            f.write(uploaded_file.read())
+
+        raw_docs = run_pdf_in_sandbox(temp_path)
+
+        st.write("Pages extracted:", len(raw_docs))
+
+        if raw_docs:
+            st.write("First page length:", len(raw_docs[0]["page_content"]))
+            st.write("Preview:", raw_docs[0]["page_content"][:200])
+
+        docs = [
+            Document(page_content=d["page_content"], metadata=d["metadata"])
+            for d in raw_docs
+        ]
+
+        
+        # for d in docs:
+        #     d.page_content = clean_page_text(d.page_content)
+
+        chunks = split_docs(docs, 2000, 200)
+        
+        # 1. Filter chunks properly
+        filtered_chunks = [
+            doc for doc in chunks
+            if doc.page_content and doc.page_content.strip()
+        ]
+
+        if not filtered_chunks:
+            st.error("❌ No valid text found in PDF after cleaning.")
+            st.stop()
+
+        # 2. Extract text
+        texts = [doc.page_content.strip() for doc in filtered_chunks]
+
+        # 3. Generate embeddings
+        embeddings = embedding_manager.generate_embeddings(texts)
+
+        if embeddings is None or len(embeddings) == 0:
+            st.error("❌ Embedding model returned empty embeddings.")
+            st.stop()
+
+        # 4. Add to vector store (ALIGNED!)
+        vectorstore.add_documents(filtered_chunks, embeddings)
+
+
+    st.success("PDF indexed successfully!")
+
+st.markdown("---")
+st.subheader("Ask a Question")
+
+query = st.text_input("Enter your question")
+
+if query:
+    with st.spinner("Generating answer..."):
+        answer = answer_query(query)
+
+    st.markdown("### 🧠 Answer")
+    st.markdown(answer)
+
+
+
+
 
 
 
