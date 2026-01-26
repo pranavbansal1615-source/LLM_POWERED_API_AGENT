@@ -1,96 +1,117 @@
-# 📄 PDF Question Answering System (RAG-Based)
+# 🤖 LLM-Powered Smart API Agent
 
-## 📌 Overview
+## 📌 About the Project
 
-This project implements a **Retrieval-Augmented Generation (RAG)** system that enables users to upload PDF documents and ask natural language questions based on their content. The system extracts text from both digital and scanned PDFs, converts the text into embeddings, stores them in a vector database, and retrieves relevant information to generate accurate, document-grounded answers using a Large Language Model (LLM).
+The **LLM-Powered Smart API Agent** is an intelligent system designed to make working with API documentation easier and faster for developers.
 
-The current version uses **Streamlit** for rapid prototyping and validation. The backend logic is designed to be reused and extended into a full-scale web application.
-
----
-
-## 🎯 Objectives
-
-- Extract text from digital and scanned PDFs
-- Apply OCR for image-based documents
-- Split documents into meaningful chunks
-- Generate semantic embeddings
-- Store and retrieve embeddings efficiently
-- Generate accurate answers grounded in document context
-- Ensure system stability using sandboxed preprocessing
+API documentation is often messy, unstructured, and difficult to navigate. Developers usually spend a lot of time searching for correct endpoints, parameters, and usage examples. Our project addresses this problem by allowing users to **ask questions in plain English** and receive **accurate, structured, and executable API information**.
 
 ---
 
-## 🧠 Core Concepts Used
+## ❓ Problem Statement
 
-### Document Chunking & Text Splitting
-Documents are divided into overlapping chunks to improve retrieval quality and avoid incomplete responses.
-
-### Sentence Transformers
-SentenceTransformer models are used to convert text into dense vector embeddings for semantic similarity search.
-
-### Vector Database (ChromaDB)
-ChromaDB stores document embeddings persistently and supports fast similarity-based retrieval.
-
-### Retrieval-Augmented Generation (RAG)
-Relevant document chunks are retrieved and passed to the LLM as context, ensuring answers are based on source documents.
-
-### OCR for Scanned PDFs
-Tesseract OCR is used to extract text from scanned PDFs, with quality checks to avoid indexing empty or noisy content.
-
-### Sandboxing
-PDF preprocessing and OCR are executed in a separate subprocess to isolate failures and maintain application stability.
+- API documentation is often scattered across large HTML or Markdown files.
+- Finding the correct endpoint and usage example is time-consuming.
+- Existing tools lack conversational, AI-powered assistance.
+- Developers are forced to manually read and interpret documentation.
 
 ---
 
+## 💡 Proposed Solution
+
+The **Smart API Agent** uses **Large Language Models (LLMs) combined with a Retrieval-Augmented Generation (RAG) pipeline** to understand API documentation and respond intelligently to user queries.
+
+Users can ask questions like:
+> *“How do I get a list of users?”*
+
+And the system responds with:
+- The correct API endpoint
+- A structured JSON representation
+- Ready-to-run code snippets (cURL / Python)
 
 ---
 
-## 🧪 Features Implemented
+## ⚙️ How the System Works (High Level)
 
-- PDF upload and indexing
-- Hybrid text extraction with OCR fallback
-- Validation to prevent empty embeddings
-- Persistent vector storage
-- Multiple queries on the same document
-- Context-aware answer generation
-- Defensive pipeline design
+1. API documentation is ingested from HTML or Markdown sources.
+2. The content is cleaned and split into meaningful chunks.
+3. Each chunk is converted into vector embeddings.
+4. Embeddings are stored in a vector database for fast retrieval.
+5. When a user asks a question:
+   - The query is embedded
+   - Relevant documentation is retrieved
+   - The LLM generates a structured and accurate response
 
----
-
-## ⚠️ Current Limitations
-
-- Prototype-level Streamlit UI
-- Single-user workflow
-- Process-level sandboxing only
-- No authentication or user isolation
-- Optimized for correctness rather than scale
+This approach avoids hallucinations and ensures answers are grounded in real documentation.
 
 ---
 
-## 🚀 Future Enhancements
+## 🧠 Key Technologies Used
 
-- Backend migration to FastAPI
-- Full frontend using React or Next.js
-- User authentication and multi-document support
-- Container-based sandboxing (Docker or Deno)
-- Web scraping integration using Scrapy
-- Improved OCR preprocessing
-- Retrieval quality evaluation metrics
+### 🔹 Data Ingestion
+- **Scrapy** is used to crawl and extract unstructured API documentation from the web.
 
----
+### 🔹 AI & Retrieval (RAG Pipeline)
+- **Sentence Transformers** generate embeddings for semantic search.
+- **ChromaDB** stores embeddings and enables fast similarity retrieval.
+- **LangChain Splitters** intelligently chunk large documentation files.
 
-## 🛠️ Tech Stack
+### 🔹 Backend
+- **FastAPI** provides a high-performance REST API.
+- **Pydantic** enforces strict input/output validation.
 
-- Python
-- Streamlit
-- SentenceTransformers
-- ChromaDB
-- LangChain
-- Groq LLM API
-- PyMuPDF (fitz)
-- Tesseract OCR
-- PyTorch
+### 🔹 Frontend
+- **React + TypeScript** is planned for a modern, interactive chat interface.
+- Current prototype uses **Streamlit** for rapid testing and validation.
+
+### 🔹 DevOps
+- **Docker & Docker Compose** for containerization.
+- **GitHub Actions** for CI/CD and automated testing.
 
 ---
 
+## 🔐 Stability & Safety
 
+- Risky preprocessing tasks are isolated using sandboxed execution.
+- This ensures failures in parsing or scraping do not crash the main system.
+- Defensive checks are applied to prevent invalid or empty data from entering the pipeline.
+
+---
+
+## 🧪 Current Status
+
+- Core RAG pipeline implemented
+- API documentation ingestion working
+- Semantic retrieval functional
+- Structured output generation implemented
+- UI prototype completed for demonstration
+
+---
+
+## 🚀 Future Scope
+
+- Full React + FastAPI deployment
+- User authentication and multi-project support
+- Improved conversational memory
+- Advanced sandboxing using containers
+- Production-ready deployment with monitoring
+
+---
+
+## 📚 Learning Outcomes
+
+- Understanding of Retrieval-Augmented Generation
+- Practical experience with embeddings and vector databases
+- Handling unstructured real-world documentation
+- Building AI systems that reduce hallucination
+- Designing scalable and modular architectures
+
+---
+
+## 🙏 Acknowledgements
+
+This project is developed as part of an academic initiative under mentor guidance, focusing on real-world applications of AI, NLP, and system design.
+
+---
+
+> **“Enough theory — let’s teach APIs to talk back!”**
