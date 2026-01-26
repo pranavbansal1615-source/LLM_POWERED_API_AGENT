@@ -93,12 +93,4 @@ PDF preprocessing and OCR are executed in a separate subprocess to isolate failu
 
 ---
 
-## ▶️ How to Run
 
-1. Create and activate a virtual environment  
-2. Install project dependencies  
-3. Install Tesseract OCR and set its path  
-4. Run the application:
-
-```bash
-streamlit run main.py
