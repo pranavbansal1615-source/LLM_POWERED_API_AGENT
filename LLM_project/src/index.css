@@ -1,0 +1,114 @@
+/* Reset */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* Full page sizing */
+html, body, #root {
+  height: 100%;
+  width: 100%;
+  font-family: Arial, sans-serif;
+}
+
+/* Background */
+body {
+  background: linear-gradient(135deg, #1e1e2f, #0f0f17);
+  padding: 0;
+}
+
+/* Layout container */
+.layout {
+  display: flex;
+  gap: 20px;
+  padding: 0;
+  height: 100vh;
+  width: 100%;
+}
+
+/* Panels */
+.uploading-documents,
+.chat-bot,
+.sandbox-terminal {
+  flex: 1;
+  border-radius: 12px;
+  padding: 15px;
+  backdrop-filter: blur(10px);
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+  color: white;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* Chat panel bigger */
+.chat-bot {
+  flex: 1.5;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Title */
+.chat-bot h2 {
+  text-align: center;
+  margin-bottom: 10px;
+}
+
+/* Chat box */
+.chatting-box {
+  flex: 1;
+  background: white;
+  color: black;
+  border-radius: 8px;
+  padding: 10px;
+  overflow-y: auto;
+}
+
+/* Messages */
+.chatting-box ul {
+  list-style: none;
+}
+
+.chatting-box li {
+  background: #646cff;
+  color: white;
+  padding: 8px 12px;
+  border-radius: 12px;
+  margin: 6px 0;
+  width: fit-content;
+}
+
+/* Input */
+.question-bar {
+  width: 100%;
+  padding: 10px;
+  border-radius: 8px;
+  border: none;
+  margin-top: 10px;
+}
+
+/* Button */
+button {
+  margin-top: 10px;
+  padding: 10px;
+  border-radius: 8px;
+  border: none;
+  background: #646cff;
+  color: white;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+button:hover {
+  background: #4f56d8;
+}
+
+/* Terminal look */
+.sandbox-terminal {
+  background: black;
+  color: white;
+  font-family: monospace;
+  overflow-y: auto;
+}
