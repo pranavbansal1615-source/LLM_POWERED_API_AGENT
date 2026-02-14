@@ -1,16 +1,24 @@
-import './App.css'
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import ChatBot from './chatbot'
+import { useState, useEffect } from "react";
+import Login from "./Login";
+import ChatBot from "./chatbot";
 
 function App() {
+  const [userId, setUserId] = useState(null);
+
+  useEffect(() => {
+    const savedId = localStorage.getItem("user_id");
+    if (savedId) setUserId(savedId);
+  }, []);
 
   return (
     <>
-
-      <ChatBot></ChatBot>
+      {!userId ? (
+        <Login onLogin={setUserId} />
+      ) : (
+        <ChatBot userId={userId} />
+      )}
     </>
-  )
+  );
 }
 
-export default App
+export default App;

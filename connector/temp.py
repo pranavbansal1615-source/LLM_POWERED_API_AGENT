@@ -266,19 +266,19 @@ def answer_query(query):
     return response.content.strip()
 
 
-from rich.console import Console
-from rich.markdown import Markdown
+# from rich.console import Console
+# from rich.markdown import Markdown
 
-console = Console()
+# console = Console()
 
-while True:
-    query = input("Enter the question you want to ask : ")
-    if str.lower(query) == "exit":
-        break
-    print("\n🧠 Answer:\n")
-    answer = answer_query(query)
+# while True:
+#     query = input("Enter the question you want to ask : ")
+#     if str.lower(query) == "exit":
+#         break
+#     print("\n🧠 Answer:\n")
+#     answer = answer_query(query)
 
-    console.print(Markdown(answer))
+#     console.print(Markdown(answer))
 
 
 
