@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import React, { useState } from "react";
 import SideBar from "./side_bar";
+import Sandbox from "./sandbox";
 
 function ChatBot() {
   const [pdfs, setPdfs] = useState([]);
@@ -17,34 +18,49 @@ function ChatBot() {
 
   // setting the user_id once and it doesnt change when we refresh
   useEffect(() => {
-
     const userID = localStorage.getItem("user_id");
-    if(!userID) return;
-
-    async function load_pdfs() {
-      
-      const res = await fetch(`http://127.0.0.1:8000/api/documents/${userID}`);
-
+    if (!userID) return;
+    
+    async function loadAllData() {
+      const res = await fetch(
+        `http://127.0.0.1:8000/api/user-data/${userID}`
+      );
+    
       const data = await res.json();
-
-      //mapping each document with the previous uploaded pdfs
-      const formatted_data = data.map(doc => ({
-        id:doc.id,
-        name:doc.file_name
-      }));
-      
-      setPdfs(formatted_data);
-
-      const savedPdfId = localStorage.getItem("selected_pdf_id");
-
-      if (savedPdfId) {
-      handlePdfSelect(savedPdfId);
-    }
-    }
     
-    load_pdfs();
+      // Store PDFs
+      setPdfs(data.map(doc => ({
+        id: doc.id,
+        name: doc.file_name
+      })));
     
-  },[])
+      // Build chats map
+      let allChats = [];
+      let allMessages = {};
+    
+      data.forEach(doc => {
+        if (!Array.isArray(doc.conversations)) return;
+            
+        doc.conversations.forEach((conv, index) => {
+          allChats.push({
+            id: conv.id,
+            title: `Chat ${index + 1}`,
+            document_id: doc.id
+          });
+        
+          allMessages[conv.id] = Array.isArray(conv.messages)
+            ? conv.messages
+            : [];
+        });
+      });
+    
+      setChats(allChats);
+      setChatMessages(allMessages);
+    }
+  
+    loadAllData();
+  }, []);
+
 
   async function handlePdfSelect(pdfId) {
     setSelectedPdfId(pdfId);
@@ -137,51 +153,60 @@ function ChatBot() {
 
   // ---------- MESSAGES ----------
   async function handleMessageAddition() {
-  if (!message.trim() || !activeChatId) return;
+    if (!message.trim() || !activeChatId) return;
 
-  const question = message;
-  setMessage("");
+    const question = message;
+    setMessage("");
 
-  // Always ensure array
-  setChatMessages(prev => {
-    const currentMessages = Array.isArray(prev[activeChatId])
-      ? prev[activeChatId]
-      : [];
+    // Add user message immediately
+    setChatMessages(prev => {
+      const current = Array.isArray(prev[activeChatId])
+        ? prev[activeChatId]
+        : [];
 
-    return {
-      ...prev,
-      [activeChatId]: [
-        ...currentMessages,
-        { role: "user", content: question }
-      ]
-    };
-  });
+      return {
+        ...prev,
+        [activeChatId]: [
+          ...current,
+          { role: "user", content: question }
+        ]
+      };
+    });
 
-  const res = await fetch("http://127.0.0.1:8000/api/ask", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      conversation_id: activeChatId,
-      question: question
-    })
-  });
+    try {
+      const res = await fetch("http://127.0.0.1:8000/api/ask", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          conversation_id: activeChatId,
+          question: question
+        })
+      });
 
-  const data = await res.json();
+      const data = await res.json();
 
-  setChatMessages(prev => {
-    const currentMessages = Array.isArray(prev[activeChatId])
-      ? prev[activeChatId]
-      : [];
+      // console.log("Backend answer:", data.answer);  // DEBUG
 
-    return {
-      ...prev,
-      [activeChatId]: [
-        ...currentMessages,
-        { role: "assistant", content: data.answer }
-      ]
-    };
-  });
-}
+      // Add assistant message ONLY after response arrives
+      setChatMessages(prev => {
+        const current = Array.isArray(prev[activeChatId])
+          ? prev[activeChatId]
+          : [];
+
+        return {
+          ...prev,
+          [activeChatId]: [
+            ...current,
+            { role: "assistant", content: data.answer }
+          ]
+        };
+      });
+
+    } catch (err) {
+      console.error("Error fetching answer:", err);
+    }
+
+  }
 
 
   const inbox = Array.isArray(chatMessages[activeChatId])
@@ -241,7 +266,7 @@ function ChatBot() {
         )}
       </div>
 
-      <div className="sandbox-terminal"></div>
+      <div className="sandbox-terminal"><Sandbox/></div>
     </div>
   );
 }

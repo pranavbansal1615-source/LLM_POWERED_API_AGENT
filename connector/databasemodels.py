@@ -35,7 +35,7 @@ class Messages(Base):
 
     __tablename__ = "messages"
 
-    id = Column(Integer, primary_key=True, autoincrement=True)
+    id = Column(String, primary_key=True)
     conversation_id = Column(String(36), nullable=False)
     role = Column(String(20), nullable=False)  
     content = Column(Text, nullable=False)

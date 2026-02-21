@@ -182,24 +182,26 @@ def ask_question(data:askRequest, db: Session = Depends(get_db)):
     answer = answer_query(data.question)
 
     user_ques = Messages(
-        id = uuid4(),
+        id = str(uuid4()),
         conversation_id = data.conversation_id,
         role = "user",
         content = data.question
     )
 
     db.add(user_ques)
+    # db.commit()
 
     assistant_ans = Messages(
-        id = uuid4(),
+        id = str(uuid4()),
         conversation_id = data.conversation_id,
         role = "assistant",
         content = answer
     )
 
     db.add(assistant_ans)
+    db.commit()
 
-    return {"bot_answer" : answer}
+    return {"answer" : answer}
 
 @app.get("/api/messages/{conversation_id}")
 
@@ -231,7 +233,7 @@ def get_user_data(user_id: str, db: Session = Depends(get_db)):
         for conv in conversations:
             messages = db.query(Messages).filter(
                 Messages.conversation_id == conv.id
-            ).order_by(Messages.created_at).all()
+            ).order_by(Messages.created_at.asc()).all()
 
             conv_list.append({
                 "id": conv.id,
