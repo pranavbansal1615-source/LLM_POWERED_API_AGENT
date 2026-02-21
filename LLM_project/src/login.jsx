@@ -21,17 +21,13 @@ function Login({ onLogin }) {
   }
 
   return (
-    <div style={{ 
-      display: "flex", 
-      justifyContent: "center", 
-      alignItems: "center", 
-      height: "100vh" 
-    }}>
-      <form onSubmit={handleLogin}>
-        <h2>Login</h2>
+    <div className="login-wrapper">
+      <form className="login-card" onSubmit={handleLogin}>
+        <h2>Welcome Back</h2>
+        <p>Enter your email to continue</p>
         <input
           type="email"
-          placeholder="Enter your email"
+          placeholder="you@example.com"
           value={email}
           onChange={e => setEmail(e.target.value)}
         />

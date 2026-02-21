@@ -244,13 +244,11 @@ function ChatBot() {
         </div>
 
         <div className="chatting-box">
-          <ul>
-            {inbox.map((msg, i) => (
-              <li key={i}>
-                <strong>{msg.role}:</strong>{msg.content}
-              </li>
-            ))}
-          </ul>
+          {inbox.map((msg, i) => (
+            <div key={i} className={`chat-message ${msg.role}`}>
+              {msg.content}
+            </div>
+          ))}
         </div>
 
         {activeChatId && (
