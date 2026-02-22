@@ -568,6 +568,98 @@ code:not(pre code) {
   color: var(--accent);
 }
 
+/* ===== MARKDOWN CONTENT (inside assistant messages) ===== */
+.chat-message.assistant {
+  padding: 13px 16px;
+  overflow: visible;
+}
+
+/* markdown elements inherit bubble padding, no extra needed */
+
+.md-p {
+  font-size: 15px;
+  line-height: 1.65;
+  color: var(--text-primary);
+  margin: 6px 0;
+}
+
+.md-h1 { font-size: 19px; font-weight: 700; color: var(--text-primary); margin: 14px 0 6px; }
+.md-h2 { font-size: 17px; font-weight: 600; color: var(--text-primary); margin: 12px 0 5px; }
+.md-h3 { font-size: 15px; font-weight: 600; color: var(--accent);        margin: 10px 0 4px; }
+
+.md-ul, .md-ol {
+  padding-left: 32px;
+  margin: 6px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.md-li {
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--text-primary);
+}
+
+.md-li::marker {
+  color: var(--accent);
+}
+
+.md-strong {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.md-em {
+  font-style: italic;
+  color: var(--text-secondary);
+}
+
+.md-blockquote {
+  border-left: 3px solid var(--accent);
+  background: var(--bg-hover);
+  margin: 8px 16px;
+  padding: 8px 14px !important;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  font-style: italic;
+  color: var(--text-secondary);
+}
+
+.md-hr {
+  border: none;
+  border-top: 1px solid var(--border-strong);
+  margin: 10px 16px;
+}
+
+.md-link {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  transition: color 0.15s ease;
+}
+
+.md-link:hover {
+  color: var(--accent-hover);
+}
+
+.inline-code {
+  background: var(--bg-hover);
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-size: 0.88em;
+  font-family: "JetBrains Mono", monospace;
+  color: var(--accent);
+}
+
+/* code block stretches edge to edge inside bubble */
+.chat-message.assistant .code-block {
+  margin: 10px -16px;
+  border-left: none;
+  border-right: none;
+  border-radius: 0;
+}
+
 /* ===== SANDBOX TERMINAL ===== */
 .sandbox-terminal {
   width: 380px;

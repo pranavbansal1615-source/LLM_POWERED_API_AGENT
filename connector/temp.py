@@ -57,16 +57,13 @@ def process_pdf_hybrid(pdf_path: str, text_threshold: int = 50):
 
     return docs
 
-pdf_files_path = "C:\\Users\\Pranav Bansal\\Documents\\LLM_POWERED_API_AGENT\\pdf_files"
-docs = []
+# pdf_files_path = "C:\\Users\\Pranav Bansal\\Documents\\LLM_POWERED_API_AGENT\\pdf_files"
 
-from pathlib import Path
-pdf_dir = Path(pdf_files_path)
-pdf_files = list(pdf_dir.glob("*.pdf"))
+# from pathlib import Path
+# pdf_dir = Path(pdf_files_path)
+# pdf_files = list(pdf_dir.glob("*.pdf"))
 
-for pdf in pdf_files:
-    doc = process_pdf_hybrid(str(pdf))
-    docs.extend(doc)
+# docs = []
 
 def clean_page_text(text: str) -> str:
     lines = text.splitlines()
@@ -127,10 +124,6 @@ def split_docs(documents,chunk_size,chunk_overlap):
     splitted_text = text_splitter.split_documents(documents)
     return splitted_text
 
-for d in docs:
-    d.page_content = clean_page_text(d.page_content)
-
-chunks = split_docs(docs,2000,200)
 
 ##created the embedding manager
 
@@ -152,10 +145,6 @@ class EmbeddingManager:
                                     )
         return embeddings
     
-texts = [doc.page_content for doc in chunks]
-
-embedding_manager=EmbeddingManager()
-embeddings = embedding_manager.generate_embeddings(texts)
 
 
 class VectorStore:
@@ -204,14 +193,40 @@ class VectorStore:
             metadatas=metadatas,
             documents=documents_text
         )
-        
 
+
+embedding_manager=EmbeddingManager()
 vectorstore=VectorStore()
-vectorstore.add_documents(chunks,embeddings)
 
-def retrieve_top_docs(query: str, top_k: int = 3):
+def generate_pdf_emb(file_path:str, user_id:str, document_id:str):
+
+    #extracting the text from pdf
+    docs = process_pdf_hybrid(file_path)
+
+
+    for d in docs:
+        d.page_content = clean_page_text(d.page_content)
+
+    chunks = split_docs(docs,2000,200)
+
+    texts = [doc.page_content for doc in chunks]
+
+    embeddings = embedding_manager.generate_embeddings(texts)
+
+    for chunk in chunks:
+        chunk.metadata["document_id"] = document_id
+        chunk.metadata["user_id"] = user_id
+
+    vectorstore.add_documents(chunks,embeddings)      
+
+# generate_pdf_emb()
+
+def retrieve_top_docs(query: str, document_id:str, top_k: int = 3):
     q_emb = embedding_manager.generate_embeddings([query])[0].tolist()
-    results = vectorstore.collection.query(query_embeddings=[q_emb], n_results=top_k)
+    results = vectorstore.collection.query(query_embeddings=[q_emb], 
+                                           n_results=top_k,
+
+                                           )
     docs = results['documents'][0]
     metas = results['metadatas'][0]
     dists = results.get('distances', [[]])[0]
@@ -224,7 +239,7 @@ llm = ChatGroq(
         api_key=os.getenv("GROQ_API_KEY"),
         model_name="llama-3.3-70b-versatile",
         temperature=0.7,
-        max_tokens=500
+        max_tokens=2000
     )
     
 def build_context(top_docs):
@@ -258,8 +273,8 @@ prompt = PromptTemplate(
     )
 )
 
-def answer_query(query):
-    top_docs = retrieve_top_docs(query)
+def answer_query(query, document_id):
+    top_docs = retrieve_top_docs(query,document_id)
     context = build_context(top_docs)
     formatted_prompt = prompt.format(context=context, question=query)
     response = llm.invoke(formatted_prompt)  

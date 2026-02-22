@@ -6,8 +6,9 @@ from uuid import uuid4
 from datetime import datetime
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from temp import answer_query
-
+from temp import answer_query,generate_pdf_emb
+from fastapi import UploadFile, File,Form
+import os,shutil,uuid
 
 app = FastAPI()
 
@@ -64,21 +65,33 @@ class DocumentsCreate(BaseModel):
 @app.post("/api/documents")
 
 def pdf_upload(
-    data:DocumentsCreate,
+    # data:DocumentsCreate,
+    user_id:str = Form(...),
+    file: UploadFile = File(...),
     db:Session = Depends(get_db)
 ):
-    print("-------------------------------")
-    print("DATA RECEIVED:", data)
+    
+    os.makedirs("uploads",exist_ok=True)
+
+    document_id = str(uuid4())
+    
+    file_path = os.path.join("uploads", f"{document_id}_{file.filename}")
+
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+
     doc = Documents(
-        id =  str(uuid4()),
-        user_id = data.user_id,
-        file_name = data.file_name,
-        file_path = data.file_path
+        id =  document_id,
+        user_id = user_id,
+        file_name = file.filename,
+        file_path = file_path
     )
 
     db.add(doc)
     db.commit()
     db.refresh(doc)
+
+    generate_pdf_emb(file_path,user_id,doc.id)
 
     return {"document_id" : doc.id}
 
@@ -166,6 +179,7 @@ def get_conversations_by_document(document_id: str, db: Session = Depends(get_db
 
 class askRequest(BaseModel):
     conversation_id:str
+    document_id:str
     question:str
 
 @app.post("/api/ask")
@@ -179,7 +193,7 @@ def ask_question(data:askRequest, db: Session = Depends(get_db)):
         for m in messages
     ]
 
-    answer = answer_query(data.question)
+    answer = answer_query(data.question, data.document_id)
 
     user_ques = Messages(
         id = str(uuid4()),

@@ -1,8 +1,87 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import React, { useState } from "react";
+import ReactMarkdown from "react-markdown";
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
+import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
 import SideBar from "./side_bar";
 import Sandbox from "./sandbox";
 
+// ── Markdown renderer for assistant messages ──────────────────────────
+function MarkdownMessage({ content }) {
+  const [copied, setCopied] = useState(null);
+
+  function handleCopy(code, id) {
+    navigator.clipboard.writeText(code);
+    setCopied(id);
+    setTimeout(() => setCopied(null), 2000);
+  }
+
+  return (
+    <ReactMarkdown
+      components={{
+        // ── Code blocks ──
+        code({ node, inline, className, children, ...props }) {
+          const language = (className || "").replace("language-", "") || "text";
+          const codeString = String(children).replace(/\n$/, "");
+          const id = `${language}-${codeString.slice(0, 20)}`;
+
+          if (inline) {
+            return <code className="inline-code" {...props}>{children}</code>;
+          }
+
+          return (
+            <div className="code-block">
+              <div className="code-header">
+                <span className="code-lang">{language}</span>
+                <button onClick={() => handleCopy(codeString, id)}>
+                  {copied === id ? "✓ Copied" : "Copy"}
+                </button>
+              </div>
+              <SyntaxHighlighter
+                style={vscDarkPlus}
+                language={language}
+                PreTag="div"
+                customStyle={{
+                  margin: 0,
+                  padding: "14px 16px",
+                  background: "#060b0e",
+                  fontSize: "13.5px",
+                  lineHeight: "1.75",
+                  borderRadius: 0,
+                }}
+                {...props}
+              >
+                {codeString}
+              </SyntaxHighlighter>
+            </div>
+          );
+        },
+
+        // ── Other markdown elements ──
+        p: ({ children }) => <p className="md-p">{children}</p>,
+        h1: ({ children }) => <h1 className="md-h1">{children}</h1>,
+        h2: ({ children }) => <h2 className="md-h2">{children}</h2>,
+        h3: ({ children }) => <h3 className="md-h3">{children}</h3>,
+        ul: ({ children }) => <ul className="md-ul">{children}</ul>,
+        ol: ({ children }) => <ol className="md-ol">{children}</ol>,
+        li: ({ children }) => <li className="md-li">{children}</li>,
+        strong: ({ children }) => <strong className="md-strong">{children}</strong>,
+        em: ({ children }) => <em className="md-em">{children}</em>,
+        blockquote: ({ children }) => <blockquote className="md-blockquote">{children}</blockquote>,
+        hr: () => <hr className="md-hr" />,
+        a: ({ href, children }) => (
+          <a href={href} className="md-link" target="_blank" rel="noreferrer">
+            {children}
+          </a>
+        ),
+      }}
+    >
+      {content}
+    </ReactMarkdown>
+  );
+}
+
+// ── Main ChatBot ───────────────────────────────────────────────────────
 function ChatBot() {
   const [pdfs, setPdfs] = useState([]);
   const [selectedPdfId, setSelectedPdfId] = useState(null);
@@ -14,7 +93,12 @@ function ChatBot() {
   const [chatMessages, setChatMessages] = useState({});
   const [message, setMessage] = useState("");
 
-  // const [response,setResponse] = useState("");
+  const bottomRef = useRef(null);
+
+  // auto-scroll to bottom on new messages
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [chatMessages, activeChatId]);
 
   // setting the user_id once and it doesnt change when we refresh
   useEffect(() => {
@@ -83,30 +167,28 @@ function ChatBot() {
 
   // ---------- PDF ----------
   async function handlePdfUpload(file) {
-    const res = await fetch("http://127.0.0.1:8000/api/documents", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        user_id: localStorage.getItem("user_id"),
-        file_name: file.name,
-        file_path: `/uploads/${file.name}`
-      })
-    });
+  const formData = new FormData();
 
-    // console.log(localStorage.getItem("user_id"));
-    const data = await res.json();
+  formData.append("file", file);
+  formData.append("user_id", localStorage.getItem("user_id"));
 
-    const newPdf = {
-      id: data.document_id,
-      name: file.name
-    };
+  const res = await fetch("http://127.0.0.1:8000/api/documents", {
+    method: "POST",
+    body: formData,   // 🚨 DO NOT set headers
+  });
 
-    setPdfs(prev => [...prev, newPdf]);
-    setSelectedPdfId(newPdf.id);
-    setChats([]);
-    setActiveChatId(null);
+  const data = await res.json();
 
-  }
+  const newPdf = {
+    id: data.document_id,
+    name: file.name
+  };
+
+  setPdfs(prev => [...prev, newPdf]);
+  setSelectedPdfId(newPdf.id);
+  setChats([]);
+  setActiveChatId(null);
+}
 
   // ---------- CHAT ----------
   async function handleNewChat() {
@@ -179,13 +261,12 @@ function ChatBot() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           conversation_id: activeChatId,
+          document_id: selectedPdfId,
           question: question
         })
       });
 
       const data = await res.json();
-
-      // console.log("Backend answer:", data.answer);  // DEBUG
 
       // Add assistant message ONLY after response arrives
       setChatMessages(prev => {
@@ -246,9 +327,14 @@ function ChatBot() {
         <div className="chatting-box">
           {inbox.map((msg, i) => (
             <div key={i} className={`chat-message ${msg.role}`}>
-              {msg.content}
+              {msg.role === "assistant" ? (
+                <MarkdownMessage content={msg.content} />
+              ) : (
+                msg.content
+              )}
             </div>
           ))}
+          <div ref={bottomRef} />
         </div>
 
         {activeChatId && (
@@ -257,6 +343,7 @@ function ChatBot() {
               className="question-bar"
               value={message}
               onChange={e => setMessage(e.target.value)}
+              onKeyDown={e => e.key === "Enter" && handleMessageAddition()}
               placeholder="Enter question..."
             />
             <button onClick={handleMessageAddition}>Send</button>
