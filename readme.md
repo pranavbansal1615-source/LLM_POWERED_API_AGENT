@@ -46,72 +46,55 @@ This approach avoids hallucinations and ensures answers are grounded in real doc
 
 ---
 
-## 🧠 Key Technologies Used
-
-### 🔹 Data Ingestion
-- **Scrapy** is used to crawl and extract unstructured API documentation from the web.
+## 🧠 Tech Stack
 
 ### 🔹 AI & Retrieval (RAG Pipeline)
-- **Sentence Transformers** generate embeddings for semantic search.
-- **ChromaDB** stores embeddings and enables fast similarity retrieval.
-- **LangChain Splitters** intelligently chunk large documentation files.
+- **Sentence Transformers**: Generate embeddings for semantic search
+- **ChromaDB**: Vector database for storing and retrieving embeddings
+- **LangChain**: Text splitting, document loading, and orchestration
+- **PyMuPDF**: PDF extraction and parsing
+- **Transformers & PyTorch**: State-of-the-art language models
 
 ### 🔹 Backend
-- **FastAPI** provides a high-performance REST API.
-- **Pydantic** enforces strict input/output validation.
+- **FastAPI**: High-performance REST API
+- **Uvicorn**: ASGI server
+- **Python-dotenv**: Environment variable management
 
 ### 🔹 Frontend
-- **React + TypeScript** is planned for a modern, interactive chat interface.
-- Current prototype uses **Streamlit** for rapid testing and validation.
+- **Streamlit**: Interactive web interface for rapid prototyping
+- **Gradio**: Alternative UI option
 
 ### 🔹 DevOps
-- **Docker & Docker Compose** for containerization.
-- **GitHub Actions** for CI/CD and automated testing.
+- **Docker**: Containerization for easy deployment
 
 ---
 
-## 🔐 Stability & Safety
+## � Prerequisites
 
-- Risky preprocessing tasks are isolated using sandboxed execution.
-- This ensures failures in parsing or scraping do not crash the main system.
-- Defensive checks are applied to prevent invalid or empty data from entering the pipeline.
-
----
-
-## 🧪 Current Status
-
-- Core RAG pipeline implemented
-- API documentation ingestion working
-- Semantic retrieval functional
-- Structured output generation implemented
-- UI prototype completed for demonstration
+Before running the application, ensure you have:
+- Python 3.11 or higher
+- Docker (optional, for containerized deployment)
+- 4GB+ RAM (recommended for LLM operations)
+- Internet connection (for downloading models)
 
 ---
 
-## 🚀 Future Scope
+## 🚀 Running the Application
 
-- Full React + FastAPI deployment
-- User authentication and multi-project support
-- Improved conversational memory
-- Advanced sandboxing using containers
-- Production-ready deployment with monitoring
+### Streamlit
+```bash
+streamlit run app.py
+```
 
----
-
-## 📚 Learning Outcomes
-
-- Understanding of Retrieval-Augmented Generation
-- Practical experience with embeddings and vector databases
-- Handling unstructured real-world documentation
-- Building AI systems that reduce hallucination
-- Designing scalable and modular architectures
+### FastAPI
+```bash
+python main.py
+```
 
 ---
 
-## 🙏 Acknowledgements
+## � License & Support
 
-This project is developed as part of an academic initiative under mentor guidance, focusing on real-world applications of AI, NLP, and system design.
+Open source for educational purposes. For issues or questions, please refer to the repository documentation.
 
----
 
-> **“Enough theory — let’s teach APIs to talk back!”**

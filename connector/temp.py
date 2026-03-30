@@ -159,6 +159,7 @@ class VectorStore:
         self.client = None
         self.collection = None
         self._initialize_store()
+        
 
     def _initialize_store(self):
         os.makedirs(self.persist_directory, exist_ok=True)
@@ -225,7 +226,7 @@ def retrieve_top_docs(query: str, document_id:str, top_k: int = 3):
     q_emb = embedding_manager.generate_embeddings([query])[0].tolist()
     results = vectorstore.collection.query(query_embeddings=[q_emb], 
                                            n_results=top_k,
-
+                                            where={"document_id":document_id}
                                            )
     docs = results['documents'][0]
     metas = results['metadatas'][0]
@@ -261,6 +262,7 @@ prompt = PromptTemplate(
         If the answer spans multiple parts, combine them logically.
         If the answer is not fully contained, say so clearly.
         If the answer is not found in the context then output that no such data is available.
+        if the answer is found make sure to clean the answer and remove all the page numbers, other headings, and specific useless tags.
 
         Context:
         {context}
