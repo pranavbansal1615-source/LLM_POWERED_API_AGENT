@@ -29,5 +29,5 @@ COPY . .
 # Expose port for FastAPI (change if using different port)
 EXPOSE 8000
 
-# Set default command to run the application
-CMD ["python", "main.py"]
+# Run the FastAPI backend
+CMD ["uvicorn", "connector.fastApiConnector:app", "--host", "0.0.0.0", "--port", "8000"]

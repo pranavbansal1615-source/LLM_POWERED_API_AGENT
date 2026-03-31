@@ -2,6 +2,9 @@ import os
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"   # hide TF INFO + WARNING logs
 os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"  # also disables oneDNN (and its info message)
 
+from dotenv import load_dotenv
+load_dotenv()
+
 import logging
 logging.getLogger("tensorflow").setLevel(logging.ERROR)
 
