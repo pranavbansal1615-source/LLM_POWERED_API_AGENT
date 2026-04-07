@@ -225,7 +225,7 @@ def generate_pdf_emb(file_path:str, user_id:str, document_id:str):
 
 # generate_pdf_emb()
 
-def retrieve_top_docs(query: str, document_id:str, top_k: int = 3):
+def retrieve_top_docs(query: str, document_id:str, top_k: int = 5):
     q_emb = embedding_manager.generate_embeddings([query])[0].tolist()
     results = vectorstore.collection.query(query_embeddings=[q_emb], 
                                            n_results=top_k,
@@ -242,7 +242,7 @@ from langchain_groq import ChatGroq
 llm = ChatGroq(
         api_key=os.getenv("GROQ_API_KEY"),
         model_name="llama-3.3-70b-versatile",
-        temperature=0.7,
+        temperature=0.2,
         max_tokens=2000
     )
     
@@ -260,20 +260,79 @@ prompt = PromptTemplate(
     input_variables=["context", "question"],
     template=(
         """
-        You are a helpful assistant.
-        Use the following extracted parts of a document to answer the question.
-        If the answer spans multiple parts, combine them logically.
-        If the answer is not fully contained, say so clearly.
-        If the answer is not found in the context then output that no such data is available.
-        if the answer is found make sure to clean the answer and remove all the page numbers, other headings, and specific useless tags.
+        You are a highly precise and reliable assistant designed to answer questions using retrieved document context.
 
-        Context:
-        {context}
+        Instructions:
+
+        * Carefully read all the provided context before answering.
+        * Extract only the relevant information needed to answer the question.
+        * If the answer spans multiple context chunks, combine them logically into a single coherent response.
+        * Remove any irrelevant elements such as page numbers, headers, footers, tags, or formatting artifacts.
+        * Pay attention to small but important details to ensure accuracy and completeness.
+        * If the available context is very small, sparse, or lacks clarity, you are allowed to enhance and expand the response to make it more useful and complete, while clearly distinguishing what is inferred or supplemented.
+
+        Code Handling Rules (HIGH PRIORITY):
+
+        * Always detect if the context contains code snippets, commands, or configurations.
+        * Preserve code exactly as it appears — do NOT modify variable names, syntax, indentation, or structure unless correcting obvious formatting issues.
+        * Always present code in properly formatted code blocks.
+        * Clearly separate code from explanation.
+        * If multiple code snippets exist, organize them logically with short explanations.
+        * If code is incomplete in the context:
+
+          * Clearly mention that it is incomplete.
+          * Optionally complete it using general knowledge, but label it as: "Completed/Extended version (inferred)".
+        * Give special importance to code over descriptive text when both are present and relevant.
+
+        Context Handling Rules:
+
+        1. If the answer is fully or partially present in the context:
+
+           * Provide a clear, structured, and concise answer based strictly on the context.
+           * Do not introduce assumptions unless necessary for coherence.
+
+        2. If the relevant context is NOT present:
+
+           * Clearly state: "The provided context does not contain sufficient information to answer this question."
+           * Then, provide a best-effort answer using your general knowledge of the topic.
+           * Clearly separate this section by saying: "Based on general knowledge:"
+
+        3. If the context is partially relevant:
+
+           * Use the available context first.
+           * Then supplement missing details using general knowledge, clearly indicating the transition.
+
+        Document-Type Specific Instructions:
+
+        A. For API Documentation:
+
+        * Focus on endpoints, request/response structure, parameters, authentication, and error handling.
+        * Present the answer in a structured format (e.g., Endpoint, Method, Headers, Parameters, Request Example, Response Example).
+        * Always highlight API-related code such as curl requests, JSON payloads, SDK usage, etc.
+        * Be precise and technical; avoid unnecessary explanations.
+
+        B. For General / Non-API Documents:
+
+        * Provide a clear, well-explained, and easy-to-understand answer.
+        * If code is present (e.g., scripts, examples, commands), treat it with equal importance as API code.
+        * Clearly explain what the code does before or after presenting it.
+        * Maintain logical flow and readability while preserving key details.
+
+        Response Formatting:
+
+        * Use structured sections where appropriate.
+        * Use bullet points or headings for clarity.
+        * Always separate explanation and code blocks.
+        * Ensure the final answer is clean, readable, and well-organized.
 
         Question:
         {question}
 
+        Context:
+        {context}
+
         Answer:
+
     """
     )
 )
@@ -286,19 +345,7 @@ def answer_query(query, document_id):
     return response.content.strip()
 
 
-# from rich.console import Console
-# from rich.markdown import Markdown
 
-# console = Console()
-
-# while True:
-#     query = input("Enter the question you want to ask : ")
-#     if str.lower(query) == "exit":
-#         break
-#     print("\n🧠 Answer:\n")
-#     answer = answer_query(query)
-
-#     console.print(Markdown(answer))
 
 
 

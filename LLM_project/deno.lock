@@ -1337,8 +1337,13 @@
     ],
     "packageJson": {
       "dependencies": [
+        "npm:@deno/vite-plugin@^1.0.5",
+        "npm:@vitejs/plugin-react@^5.1.2",
+        "npm:react-dom@^19.2.0",
         "npm:react-markdown@^10.1.0",
-        "npm:react-syntax-highlighter@^16.1.0"
+        "npm:react-syntax-highlighter@^16.1.0",
+        "npm:react@^19.2.0",
+        "npm:vite@^7.3.1"
       ]
     }
   }
