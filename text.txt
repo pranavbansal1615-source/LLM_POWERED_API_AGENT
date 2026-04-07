@@ -1,0 +1,172 @@
+📖 Abstract
+
+This project introduces an autonomous Smart API Agent that:
+
+Converts unstructured API documentation → executable code
+Uses a RAG (Retrieval-Augmented Generation) pipeline
+Ensures:
+✅ Zero hallucination responses
+✅ Secure execution using WebAssembly sandbox
+✅ Accurate, document-grounded answers
+🚨 Problem
+
+Developers waste time:
+
+Searching large API docs
+Figuring endpoints, headers, parameters manually
+🎯 Solution
+AI reads documentation
+Generates ready-to-run Python code
+Executes safely in-browser
+🧠 Core Concept: Retrieval-Augmented Generation (RAG)
+What is RAG?
+Combines:
+LLMs (generation)
+External knowledge base (retrieval)
+
+👉 Result:
+
+Context-aware
+Accurate
+Real-world grounded responses
+⚠️ Challenge in Traditional RAG
+High computation cost
+Increased latency
+Large storage overhead
+🎯 Objective
+
+Build a:
+
+Modular
+Low-latency
+Efficient RAG system
+using Python + React stack
+⚙️ System Architecture
+🔹 Backend
+Python + FastAPI
+Asynchronous request handling
+🔹 Frontend
+React.js
+Real-time UI
+🔹 Vector Database
+FAISS / ChromaDB
+🔄 Pipeline Workflow
+1. Data Ingestion
+Parse documents
+Split into chunks
+2. Embedding Generation
+Sentence-transformers convert text → vectors
+3. Vector Search
+k-NN retrieves relevant chunks
+4. Content Generation
+Context injected into LLM
+Generates response + code
+🧮 Technical Foundations
+🔹 Similarity Metric
+Cosine similarity between vectors
+🔹 Chunking Strategy
+Fixed size chunks
+10–20% overlap
+🔹 Embedding Size
+384–768 dimensions
+🔹 Indexing
+HNSW (Hierarchical Navigable Small World graphs)
+🔐 Security & Safe Execution
+🛡️ Sandbox Execution
+Python runs in Pyodide WebWorker (browser)
+⚡ WebAssembly (WASM)
+No OS-level access
+Blocks malicious code (e.g., os.system())
+⚙️ Async Processing
+Deno handles heavy tasks
+FastAPI remains responsive
+🧪 Methodology (Detailed Flow)
+Upload API PDFs
+Parse using LangChain
+Convert text → embeddings
+Store in ChromaDB
+Query → semantic search
+Send context to LLM (DeepSeek-R1)
+Generate:
+Answer
+Python code
+Regex processing:
+Remove <think>
+Extract <EXECUTE_PYTHON>
+Execute code in sandbox
+🧰 Tech Stack
+React
+FastAPI
+LangChain
+HuggingFace Transformers
+ChromaDB
+DeepSeek-R1
+Deno
+Pyodide
+📊 Key Insights
+⚖️ Efficiency vs Accuracy
+Larger chunks → better context
+But:
+↑ tokens
+↑ latency
+
+👉 “Token fatigue” limits size
+
+⏱️ Bottleneck
+Embedding generation = slowest step
+Not vector search
+📚 Theory Validation
+“Lost in the Middle” effect:
+Best results when context is concise
+📈 Results
+✅ Achievements
+Zero hallucination responses
+Accurate document-grounded answers
+Secure execution environment
+🔒 Security Success
+Malicious code completely blocked
+⚡ Performance
+Async execution via Deno
+Smooth UI experience
+🏁 Conclusion
+✔ Functional System
+End-to-end RAG pipeline
+✔ Optimal Chunk Size
+~512 tokens best balance
+✔ Scalable Design
+Ready for production deployment
+🔮 Future Scope
+Model compression (quantization)
+TinyML for edge deployment
+Query optimization (semantic rewriting)
+Add conversational memory (SQLAlchemy)
+CI/CD via GitHub Actions
+📚 References
+Lewis et al., RAG (NeurIPS 2020)
+Vaswani et al., Transformers (NeurIPS 2017)
+LangChain Docs
+ChromaDB Docs
+OpenAI API Docs
+FastAPI Docs
+React Docs
+AWS EC2 Docs
+Vercel Docs
+🧾 Extra Poster Notes (Formatting Info)
+Poster size: 21” × 36” (scaled to 42” × 72”)
+Recommended image quality: 150–200 DPI
+Avoid low-res (72 DPI) web images
+✅ Final Simplified Summary (Quick Revision)
+
+👉 Your project builds a system that:
+
+Reads API docs
+Understands them using RAG
+Generates accurate code
+Executes it safely in-browser
+
+👉 Key strengths:
+
+Zero hallucination
+High security
+Fast performance
+Developer productivity boost

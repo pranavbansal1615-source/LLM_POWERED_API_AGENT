@@ -34,7 +34,7 @@ function MarkdownMessage({ content }) {
               <div className="code-header">
                 <span className="code-lang">{language}</span>
                 <button onClick={() => handleCopy(codeString, id)}>
-                  {copied === id ? "✓ Copied" : "Copy"}
+                  {copied === id ? "✓ Copied" : "⎘ Copy"}
                 </button>
               </div>
               <SyntaxHighlighter
@@ -81,6 +81,17 @@ function MarkdownMessage({ content }) {
   );
 }
 
+// ── Typing indicator ──
+function TypingIndicator() {
+  return (
+    <div className="chat-message assistant typing-indicator">
+      <span className="typing-dot"></span>
+      <span className="typing-dot"></span>
+      <span className="typing-dot"></span>
+    </div>
+  );
+}
+
 // ── Main ChatBot ───────────────────────────────────────────────────────
 function ChatBot() {
   const [pdfs, setPdfs] = useState([]);
@@ -92,13 +103,23 @@ function ChatBot() {
 
   const [chatMessages, setChatMessages] = useState({});
   const [message, setMessage] = useState("");
+  const [isThinking, setIsThinking] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
 
   const bottomRef = useRef(null);
+  const inputRef = useRef(null);
 
   // auto-scroll to bottom on new messages
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [chatMessages, activeChatId]);
+  }, [chatMessages, activeChatId, isThinking]);
+
+  // Focus input when chat is selected
+  useEffect(() => {
+    if (activeChatId) {
+      inputRef.current?.focus();
+    }
+  }, [activeChatId]);
 
   // setting the user_id once and it doesnt change when we refresh
   useEffect(() => {
@@ -151,6 +172,11 @@ function ChatBot() {
     setActiveChatId(null);
     setActiveChatTitle("");
 
+    if (!pdfId) {
+      setChats([]);
+      return;
+    }
+
     const res = await fetch(`http://127.0.0.1:8000/api/conversations/${pdfId}`);
     const data = await res.json();
 
@@ -167,34 +193,41 @@ function ChatBot() {
 
   // ---------- PDF ----------
   async function handlePdfUpload(file) {
-  const formData = new FormData();
+    setIsUploading(true);
+    const formData = new FormData();
 
-  formData.append("file", file);
-  formData.append("user_id", localStorage.getItem("user_id"));
+    formData.append("file", file);
+    formData.append("user_id", localStorage.getItem("user_id"));
 
-  const res = await fetch("http://127.0.0.1:8000/api/documents", {
-    method: "POST",
-    body: formData,   // 🚨 DO NOT set headers
-  });
+    try {
+      const res = await fetch("http://127.0.0.1:8000/api/documents", {
+        method: "POST",
+        body: formData,
+      });
 
-  const data = await res.json();
+      const data = await res.json();
 
-  const newPdf = {
-    id: data.document_id,
-    name: file.name
-  };
+      const newPdf = {
+        id: data.document_id,
+        name: file.name
+      };
 
-  setPdfs(prev => [...prev, newPdf]);
-  setSelectedPdfId(newPdf.id);
-  setChats([]);
-  setActiveChatId(null);
-}
+      setPdfs(prev => [...prev, newPdf]);
+      setSelectedPdfId(newPdf.id);
+      setChats([]);
+      setActiveChatId(null);
+    } catch (err) {
+      console.error("Upload failed:", err);
+    } finally {
+      setIsUploading(false);
+    }
+  }
 
   // ---------- CHAT ----------
   async function handleNewChat() {
-  if (!selectedPdfId) return;
+    if (!selectedPdfId) return;
 
-  const res = await fetch("http://127.0.0.1:8000/api/conversations", {
+    const res = await fetch("http://127.0.0.1:8000/api/conversations", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -235,10 +268,11 @@ function ChatBot() {
 
   // ---------- MESSAGES ----------
   async function handleMessageAddition() {
-    if (!message.trim() || !activeChatId) return;
+    if (!message.trim() || !activeChatId || isThinking) return;
 
     const question = message;
     setMessage("");
+    setIsThinking(true);
 
     // Add user message immediately
     setChatMessages(prev => {
@@ -285,8 +319,21 @@ function ChatBot() {
 
     } catch (err) {
       console.error("Error fetching answer:", err);
+      setChatMessages(prev => {
+        const current = Array.isArray(prev[activeChatId])
+          ? prev[activeChatId]
+          : [];
+        return {
+          ...prev,
+          [activeChatId]: [
+            ...current,
+            { role: "assistant", content: "⚠️ Failed to get response. Please try again." }
+          ]
+        };
+      });
+    } finally {
+      setIsThinking(false);
     }
-
   }
 
 
@@ -300,7 +347,8 @@ function ChatBot() {
     window.location.reload();
   }
 
-  
+  const userEmail = localStorage.getItem("email") || "User";
+
   return (
     <div className="layout">
       <SideBar
@@ -311,43 +359,103 @@ function ChatBot() {
         onPdfSelect={handlePdfSelect}
         onChatSelect={handleChatSelect}
         onNewChat={handleNewChat}
+        isUploading={isUploading}
       />
 
       <div className="chat-bot">
-        <div style={{ display: "flex", justifyContent: "space-between" }}>
-          <h2>
-            {activeChatId ? activeChatTitle : "Select a chat"} &ensp;
-            <button onClick={handleLogout}>Logout</button>
-          </h2>
-          {selectedPdfId && (
-            <button onClick={handleNewChat}>+ New Chat</button>
-          )}
+        {/* Header */}
+        <div className="chat-header">
+          <div className="chat-header-left">
+            <h2>{activeChatId ? activeChatTitle : "Select a chat"}</h2>
+            {activeChatId && selectedPdfId && (
+              <span className="chat-doc-badge">
+                📄 {pdfs.find(p => p.id === selectedPdfId)?.name || "Document"}
+              </span>
+            )}
+          </div>
+          <div className="chat-header-right">
+            {selectedPdfId && (
+              <button className="new-chat-btn" onClick={handleNewChat}>+ New Chat</button>
+            )}
+            <button className="logout-btn" onClick={handleLogout}>Logout</button>
+          </div>
         </div>
 
+        {/* Chat Messages */}
         <div className="chatting-box">
-          {inbox.map((msg, i) => (
-            <div key={i} className={`chat-message ${msg.role}`}>
-              {msg.role === "assistant" ? (
-                <MarkdownMessage content={msg.content} />
-              ) : (
-                msg.content
-              )}
+          {!activeChatId ? (
+            <div className="empty-state">
+              <div className="empty-icon">🤖</div>
+              <h3>LLM-Powered API Agent</h3>
+              <p>Upload a PDF document and start a chat to ask questions about its content.</p>
+              <div className="empty-features">
+                <div className="feature-card">
+                  <span>📄</span>
+                  <p>Upload API docs</p>
+                </div>
+                <div className="feature-card">
+                  <span>💬</span>
+                  <p>Ask questions</p>
+                </div>
+                <div className="feature-card">
+                  <span>🐍</span>
+                  <p>Run code snippets</p>
+                </div>
+              </div>
             </div>
-          ))}
+          ) : inbox.length === 0 ? (
+            <div className="empty-state">
+              <div className="empty-icon">💬</div>
+              <h3>Start the conversation</h3>
+              <p>Ask anything about your uploaded document</p>
+            </div>
+          ) : (
+            inbox.map((msg, i) => (
+              <div key={i} className={`chat-message ${msg.role}`}>
+                <div className="message-avatar">
+                  {msg.role === "user" ? "You" : "AI"}
+                </div>
+                <div className="message-content">
+                  {msg.role === "assistant" ? (
+                    <MarkdownMessage content={msg.content} />
+                  ) : (
+                    msg.content
+                  )}
+                </div>
+              </div>
+            ))
+          )}
+          {isThinking && <TypingIndicator />}
           <div ref={bottomRef} />
         </div>
 
+        {/* Input Area */}
         {activeChatId && (
-          <>
+          <div className="chat-input-area">
             <input
+              ref={inputRef}
               className="question-bar"
               value={message}
               onChange={e => setMessage(e.target.value)}
               onKeyDown={e => e.key === "Enter" && handleMessageAddition()}
-              placeholder="Enter question..."
+              placeholder="Ask a question about your document…"
+              disabled={isThinking}
             />
-            <button onClick={handleMessageAddition}>Send</button>
-          </>
+            <button
+              className="send-btn"
+              onClick={handleMessageAddition}
+              disabled={!message.trim() || isThinking}
+            >
+              {isThinking ? (
+                <span className="btn-spinner"></span>
+              ) : (
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="22" y1="2" x2="11" y2="13"></line>
+                  <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                </svg>
+              )}
+            </button>
+          </div>
         )}
       </div>
 
