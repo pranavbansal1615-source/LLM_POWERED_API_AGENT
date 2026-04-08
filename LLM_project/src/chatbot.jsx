@@ -125,44 +125,44 @@ function ChatBot() {
   useEffect(() => {
     const userID = localStorage.getItem("user_id");
     if (!userID) return;
-    
+
     async function loadAllData() {
       const res = await fetch(
         `http://127.0.0.1:8000/api/user-data/${userID}`
       );
-    
+
       const data = await res.json();
-    
+
       // Store PDFs
       setPdfs(data.map(doc => ({
         id: doc.id,
         name: doc.file_name
       })));
-    
+
       // Build chats map
       let allChats = [];
       let allMessages = {};
-    
+
       data.forEach(doc => {
         if (!Array.isArray(doc.conversations)) return;
-            
+
         doc.conversations.forEach((conv, index) => {
           allChats.push({
             id: conv.id,
             title: `Chat ${index + 1}`,
             document_id: doc.id
           });
-        
+
           allMessages[conv.id] = Array.isArray(conv.messages)
             ? conv.messages
             : [];
         });
       });
-    
+
       setChats(allChats);
       setChatMessages(allMessages);
     }
-  
+
     loadAllData();
   }, []);
 
@@ -338,8 +338,8 @@ function ChatBot() {
 
 
   const inbox = Array.isArray(chatMessages[activeChatId])
-  ? chatMessages[activeChatId]
-  : [];
+    ? chatMessages[activeChatId]
+    : [];
 
 
   function handleLogout() {
@@ -459,7 +459,7 @@ function ChatBot() {
         )}
       </div>
 
-      <div className="sandbox-terminal"><Sandbox/></div>
+      <div className="sandbox-terminal"><Sandbox /></div>
     </div>
   );
 }

@@ -12,6 +12,12 @@ const PRE_INSTALLED_PACKAGES = [
   "pyodide-http",
   "requests",
   "urllib3",
+  "beautifulsoup4",
+  "pyyaml",
+  "jsonschema",
+  "certifi",
+  "charset-normalizer",
+  "idna",
 ];
 
 function Sandbox() {
@@ -44,7 +50,19 @@ function Sandbox() {
         const micropip = pyodideInstance.pyimport("micropip");
 
         // Install packages one by one for better status tracking
-        for (const pkg of ["pyodide-http", "requests", "urllib3"]) {
+        const packagesToInstall = [
+          "pyodide-http",
+          "requests",
+          "urllib3",
+          "beautifulsoup4",
+          "pyyaml",
+          "jsonschema",
+          "certifi",
+          "charset-normalizer",
+          "idna",
+        ];
+
+        for (const pkg of packagesToInstall) {
           setLoadingStatus(`Installing ${pkg}…`);
           try {
             await micropip.install(pkg);
@@ -66,7 +84,7 @@ pyodide_http.patch_all()
         setPyodide(pyodideInstance);
         setPackagesReady(true);
         setIsLoading(false);
-        setOutput("✅ Python ready — requests, urllib3 pre-installed\n$ ");
+        setOutput("✅ Python ready — requests, urllib3, beautifulsoup4, pyyaml, jsonschema pre-installed\n$ ");
       } catch (err) {
         setIsLoading(false);
         setOutput("❌ Failed to load Python: " + err.message);
